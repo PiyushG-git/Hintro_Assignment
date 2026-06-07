@@ -91,7 +91,9 @@ Sent by Hintro Meeting Intelligence
 
   const { data, error } = await resend.emails.send({
     from: `${fromName} <${fromEmail}>`,
-    to: [fromEmail], // In production this would be the assignee's email
+    // FIX 3: Use RESEND_TO_EMAIL if set; otherwise fall back to the from address.
+    // In production, this should be the assignee's actual email.
+    to: [process.env.RESEND_TO_EMAIL || fromEmail],
     subject,
     html: htmlBody,
     text: textBody,

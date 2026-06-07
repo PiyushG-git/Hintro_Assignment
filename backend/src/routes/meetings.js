@@ -251,8 +251,19 @@ router.post('/:id/analyze', async (req, res, next) => {
       return errorResponse(res, 'NOT_FOUND', 'Meeting not found', req.traceId, 404);
     }
 
-    // Run AI analysis
-    let analysis;
+    // FIX 1: Guard against re-analysis — return cached result if already analyzed
+    if (meeting.analyzedAt) {
+      return successResponse(
+        res,
+        {
+          analysis: meeting.analysis,
+          analyzedAt: meeting.analyzedAt,
+          cached: true,
+          message: 'This meeting has already been analyzed. Returning cached result.',
+        },
+        req.traceId
+      );
+    }
     try {
       analysis = await analyzeMeeting(meeting);
     } catch (aiErr) {
@@ -265,14 +276,15 @@ router.post('/:id/analyze', async (req, res, next) => {
     await meeting.save();
 
     // Auto-create ActionItem documents from AI-extracted action items
+    // FIX 2: Create action items even if assignee is null (was silently dropped before)
     const createdActionItems = [];
     for (const item of analysis.actionItems) {
-      if (item.task && item.assignee) {
+      if (item.task) {
         const actionItem = await ActionItem.create({
           meetingId: meeting._id,
           task: item.task,
-          assignee: item.assignee,
-          dueDate: item.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default: 1 week
+          assignee: item.assignee || null,
+          dueDate: item.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           citations: item.citations || [],
           createdBy: req.user.id,
         });
