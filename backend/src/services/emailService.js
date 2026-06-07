@@ -1,20 +1,20 @@
-const sgMail = require('@sendgrid/mail');
+const { Resend } = require('resend');
 const logger = require('../utils/logger');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
- * Sends a reminder email for an overdue action item via SendGrid.
+ * Sends a reminder email for an overdue action item via Resend.
  *
  * @param {object} actionItem - ActionItem document
  * @returns {Promise<void>}
  */
 const sendReminderEmail = async (actionItem) => {
-  const fromEmail = process.env.SENDGRID_FROM_EMAIL;
-  const fromName = process.env.SENDGRID_FROM_NAME || 'Hintro Reminders';
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  const fromName = process.env.RESEND_FROM_NAME || 'Hintro Reminders';
 
   if (!fromEmail) {
-    throw new Error('SENDGRID_FROM_EMAIL environment variable is not set');
+    throw new Error('RESEND_FROM_EMAIL environment variable is not set');
   }
 
   const dueDate = new Date(actionItem.dueDate).toLocaleDateString('en-US', {
@@ -24,24 +24,6 @@ const sendReminderEmail = async (actionItem) => {
   });
 
   const subject = `⚠️ Overdue Reminder: ${actionItem.task}`;
-
-  const textBody = `
-Hintro Action Item Reminder
-===========================
-
-This is a reminder that the following action item is overdue:
-
-Task:       ${actionItem.task}
-Assigned To: ${actionItem.assignee}
-Due Date:   ${dueDate}
-Status:     ${actionItem.status}
-Meeting ID: ${actionItem.meetingId}
-
-Please update the status of this action item at your earliest convenience.
-
----
-Sent by Hintro Meeting Intelligence
-`.trim();
 
   const htmlBody = `
 <!DOCTYPE html>
@@ -67,7 +49,7 @@ Sent by Hintro Meeting Intelligence
     </div>
     <div class="body">
       <p style="color:#374151; margin-top:0;">This action item is past its due date and requires your attention.</p>
-      
+
       <div class="label">Task</div>
       <div class="value">${actionItem.task}</div>
 
@@ -91,17 +73,37 @@ Sent by Hintro Meeting Intelligence
 </html>
   `.trim();
 
-  const msg = {
-    to: fromEmail, // In a real app, this would be the assignee's email
-    from: { email: fromEmail, name: fromName },
+  const textBody = `
+Hintro Action Item Reminder
+===========================
+
+Task:        ${actionItem.task}
+Assigned To: ${actionItem.assignee}
+Due Date:    ${dueDate}
+Status:      ${actionItem.status}
+Meeting ID:  ${actionItem.meetingId}
+
+Please update the status of this action item at your earliest convenience.
+
+---
+Sent by Hintro Meeting Intelligence
+  `.trim();
+
+  const { data, error } = await resend.emails.send({
+    from: `${fromName} <${fromEmail}>`,
+    to: [fromEmail], // In production this would be the assignee's email
     subject,
-    text: textBody,
     html: htmlBody,
-  };
+    text: textBody,
+  });
 
-  await sgMail.send(msg);
+  if (error) {
+    logger.error('Resend API error', { error, actionItemId: actionItem._id });
+    throw new Error(`Resend failed: ${error.message}`);
+  }
 
-  logger.info('Reminder email sent', {
+  logger.info('Reminder email sent via Resend', {
+    messageId: data?.id,
     actionItemId: actionItem._id,
     assignee: actionItem.assignee,
     task: actionItem.task,

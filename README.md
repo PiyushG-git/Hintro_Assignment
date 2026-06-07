@@ -26,7 +26,7 @@
 - ✅ Hallucination prevention — citation validation + speaker verification
 - ✅ Action Item CRUD with status tracking (PENDING → IN_PROGRESS → COMPLETED)
 - ✅ Overdue detection
-- ✅ Scheduled reminders via **node-cron** + **SendGrid email**
+- ✅ Scheduled reminders via **node-cron** + **Resend email**
 - ✅ Unified response format with trace IDs
 - ✅ Structured logging (Winston)
 - ✅ Input validation (Zod)
@@ -43,7 +43,7 @@
 - Node.js 18+
 - MongoDB Atlas account (free tier)
 - Google Gemini API key (free at [aistudio.google.com](https://aistudio.google.com))
-- SendGrid account (free tier at [sendgrid.com](https://sendgrid.com))
+- Resend account (free tier at [resend.com](https://resend.com))
 
 ### 1. Clone & Install
 
@@ -76,10 +76,10 @@ JWT_EXPIRES_IN=7d
 GEMINI_API_KEY=your_gemini_key_here
 GEMINI_MODEL=gemini-1.5-flash
 
-# SendGrid
-SENDGRID_API_KEY=SG.your_key_here
-SENDGRID_FROM_EMAIL=reminders@yourdomain.com
-SENDGRID_FROM_NAME=Hintro Reminders
+# Resend
+RESEND_API_KEY=re_your_api_key_here
+RESEND_FROM_EMAIL=reminders@yourdomain.com
+RESEND_FROM_NAME=Hintro Reminders
 
 # Reminder scheduler
 REMINDER_CRON=0 * * * *
@@ -194,7 +194,7 @@ backend/
 │   ├── middleware/       # traceId, auth, logging, validation, error handling
 │   ├── models/           # User, Meeting, ActionItem Mongoose schemas
 │   ├── routes/           # Express routers with Swagger JSDoc
-│   ├── services/         # aiService (Gemini), emailService (SendGrid), reminderJob (cron)
+│   ├── services/         # aiService (Gemini), emailService (Resend), reminderJob (cron)
 │   ├── utils/            # logger (Winston), response builder
 │   └── app.js            # Express app entry point
 ├── tests/                # Jest unit tests

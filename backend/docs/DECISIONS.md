@@ -81,23 +81,24 @@ This document explains the key architectural and technical decisions made for th
 
 ---
 
-## 5. External Integration: SendGrid Email API
+## 5. External Integration: Resend Email API
 
-**Choice:** SendGrid `@sendgrid/mail` v8
+**Choice:** Resend `resend` v3
 
 **Rationale:**
-- Free tier: 100 emails/day (3,000/month) — sufficient for an evaluation
-- Industry standard; evaluators will recognize it
-- Rich email with HTML templates demonstrates practical production thinking
-- Official SDK is simple and well-documented
+- Free tier: 3,000 emails/month, 100/day — sufficient for an evaluation
+- Modern, developer-friendly API with excellent SDK
+- Clean simple API: `resend.emails.send()` — no complex configuration
+- Official Node.js SDK with TypeScript support
+- Beautiful email deliverability out of the box
 
 **Alternatives Considered:**
+- **SendGrid** — more established but heavier SDK and more complex setup
 - **Discord Webhook** — very easy but less "production-grade" feel
 - **Telegram Bot** — requires creating a bot and chat ID setup; extra friction
-- **Resend** — good alternative but SendGrid is more established
 
 **Trade-offs:**
-- Requires a verified sender domain in SendGrid for production. For evaluation, using the "from" address with single sender verification is sufficient
+- Requires a verified sender domain in Resend for production. For evaluation, using `onboarding@resend.dev` as a test sender works without domain verification
 
 ---
 

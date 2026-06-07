@@ -22,7 +22,7 @@ router.get('/evaluation', (req, res) => {
       email: process.env.CANDIDATE_EMAIL || 'piyush@example.com',
       repositoryUrl: process.env.REPOSITORY_URL || 'https://github.com/yourusername/hintro-meeting-intelligence',
       deployedUrl: process.env.DEPLOYED_URL || 'https://hintro-meeting-intelligence.onrender.com',
-      externalIntegration: 'SendGrid Email API',
+      externalIntegration: 'Resend Email API',
       features: [
         'JWT Authentication',
         'Meeting Management with Transcript Storage',

@@ -21,11 +21,11 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-1.5-flash
-      - key: SENDGRID_API_KEY
+      - key: RESEND_API_KEY
         sync: false
-      - key: SENDGRID_FROM_EMAIL
+      - key: RESEND_FROM_EMAIL
         sync: false
-      - key: SENDGRID_FROM_NAME
+      - key: RESEND_FROM_NAME
         value: Hintro Reminders
       - key: REMINDER_CRON
         value: "0 * * * *"
