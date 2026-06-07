@@ -30,7 +30,7 @@ router.get('/evaluation', (req, res) => {
         'Action Item Management (CRUD + Status)',
         'Overdue Detection',
         'Scheduled Reminder Job (node-cron)',
-        'SendGrid Email Reminders',
+        'Resend Email Reminders',
         'Unified API Response Format',
         'Request Trace ID',
         'Structured Logging (Winston)',
