@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: hintro-meeting-intelligence
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-1.5-flash
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+      - key: SENDGRID_FROM_NAME
+        value: Hintro Reminders
+      - key: REMINDER_CRON
+        value: "0 * * * *"
+      - key: REMINDER_COOLDOWN_HOURS
+        value: 24
+      - key: CANDIDATE_NAME
+        value: Piyush Gupta
+      - key: CANDIDATE_EMAIL
+        sync: false
+      - key: REPOSITORY_URL
+        sync: false
+      - key: DEPLOYED_URL
+        sync: false
