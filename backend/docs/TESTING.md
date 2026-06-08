@@ -2,7 +2,7 @@
 
 ## Test Strategy
 
-Tests are written with **Jest** and **Supertest**. All external dependencies (MongoDB, Gemini API, SendGrid) are mocked to ensure tests run in isolation without needing any live services.
+Tests are written with **Jest** and **Supertest**. All external dependencies (MongoDB, Mistral AI API, Resend) are mocked to ensure tests run in isolation without needing any live services.
 
 ---
 
@@ -88,7 +88,7 @@ npm run test:watch    # Watch mode for development
 
 ## Limitations Discovered
 
-1. **Integration tests not included** — Tests mock DB and external services. Real integration tests against a live MongoDB and Gemini instance would catch schema-level issues.
+1. **Integration tests not included** — Tests mock DB and external services. Real integration tests against a live MongoDB and Mistral AI instance would catch schema-level issues.
 2. **Reminder job not directly tested** — The cron scheduler is tested by calling `processReminders()` directly in a unit test scenario, but the full cron timing is not verified.
 3. **No load testing** — Performance under concurrent requests has not been profiled.
-4. **Gemini response variability** — Since Gemini output is non-deterministic (even at low temperature), exhaustive citation pattern testing is done on the validation code, not on actual Gemini calls.
+4. **AI response variability** — Since Mistral output is non-deterministic (even at low temperature), exhaustive citation pattern testing is done on the validation code, not on actual Mistral API calls.

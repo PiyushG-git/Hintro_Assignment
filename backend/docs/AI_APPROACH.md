@@ -6,17 +6,19 @@ This document describes the AI integration strategy, prompt design, citation mec
 
 ## 1. LLM Provider
 
-**Google Gemini 1.5 Flash** via the `@google/generative-ai` SDK.
+**Mistral AI** (`mistral-medium-latest`) via the Mistral REST API.
 
-Configuration:
 ```js
-{
-  model: 'gemini-1.5-flash',
-  generationConfig: {
-    responseMimeType: 'application/json',  // Forces structured JSON output
-    temperature: 0.1,                      // Low temperature = factual, consistent
-  }
-}
+const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}` },
+  body: JSON.stringify({
+    model: process.env.MISTRAL_MODEL || 'mistral-medium-latest',
+    temperature: 0.1,             // Low temperature = factual, consistent
+    response_format: { type: 'json_object' }, // Forces structured JSON output
+    messages: [ systemMessage, userMessage ],
+  }),
+});
 ```
 
 ---
@@ -95,7 +97,7 @@ If the model assigns a task to "Charlie" who never spoke in the transcript, the 
 `temperature: 0.1` minimizes creative variation and keeps the model close to the source material.
 
 ### 4.4 JSON Mode
-Using `responseMimeType: 'application/json'` forces the model to output valid JSON, eliminating prose interpolation that could smuggle unverifiable claims.
+Using `response_format: { type: 'json_object' }` forces the model to output valid JSON, eliminating prose interpolation that could smuggle unverifiable claims.
 
 ---
 
@@ -112,8 +114,8 @@ Using `responseMimeType: 'application/json'` forces the model to output valid JS
 
 ## 6. Known Limitations
 
-1. **Long transcripts** — Gemini Flash has a context window limit. Very long meetings (>1 hour) may need chunking (not implemented).
+1. **Long transcripts** — Mistral has a large context window but very long meetings (>1 hour) may still need chunking (not implemented).
 2. **Ambiguous speakers** — If a speaker changes their name between turns (typo, nickname), speaker validation may produce false negatives.
 3. **Timestamp format** — The current implementation treats timestamps as opaque strings. If transcripts use different formats (e.g., `00:10` vs `0:10`), they won't match. Normalizing format on ingest would mitigate this.
 4. **Implicit decisions** — If a decision is implied but not explicitly stated, the model may correctly omit it (desirable) or may miss a genuinely explicit decision.
-5. **Model API quota** — Free Gemini tier has RPM limits. Under load, analysis requests may fail with 429; proper retry logic would be needed for production.
+5. **Model API quota** — Free Mistral tier has RPM limits. Under load, analysis requests may fail with 429; proper retry logic would be needed for production.

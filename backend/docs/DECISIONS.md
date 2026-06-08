@@ -10,7 +10,7 @@ This document explains the key architectural and technical decisions made for th
 
 **Rationale:**
 - Non-blocking I/O is ideal for this use case — most operations are I/O bound (DB queries, AI API calls)
-- Vast npm ecosystem with direct SDKs for Gemini and SendGrid
+- Vast npm ecosystem with direct SDKs for Mistral and Resend
 - Easy to deploy on Render.com with zero configuration
 
 **Alternatives Considered:**
@@ -61,22 +61,24 @@ This document explains the key architectural and technical decisions made for th
 
 ---
 
-## 4. AI Provider: Google Gemini 1.5 Flash
+## 4. AI Provider: Mistral AI
 
-**Choice:** `gemini-1.5-flash` with `responseMimeType: 'application/json'`
+**Choice:** `mistral-medium-latest` via Mistral REST API with `response_format: { type: 'json_object' }`
 
 **Rationale:**
 - Free tier is generous and sufficient for evaluation
-- JSON mode (`responseMimeType: 'application/json'`) produces reliable structured output
+- JSON mode (`response_format: json_object`) produces reliable structured output
 - Low temperature (0.1) produces factual, consistent responses
-- No credit card required unlike OpenAI for free usage
+- No credit card required for free tier access
+- REST API integration avoids ESM/CJS compatibility issues with some AI SDKs
 
 **Alternatives Considered:**
 - **OpenAI GPT-4** — excellent quality but requires paid account
-- **Claude (Anthropic)** — also excellent but requires paid account for API access
+- **Google Gemini** — free tier quota limits caused issues during testing; Mistral more reliable
+- **Claude (Anthropic)** — excellent but requires paid account for API access
 
 **Trade-offs:**
-- Gemini Flash occasionally produces slightly less nuanced analysis than GPT-4; acceptable for this use case
+- Mistral medium occasionally produces slightly less nuanced analysis than GPT-4; acceptable for this use case
 - The structured JSON output mode sometimes omits optional fields; handled by post-processing defaults
 
 ---

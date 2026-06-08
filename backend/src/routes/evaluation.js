@@ -26,7 +26,7 @@ router.get('/evaluation', (req, res) => {
       features: [
         'JWT Authentication',
         'Meeting Management with Transcript Storage',
-        'AI Analysis with Google Gemini (citation-grounded)',
+        'AI Analysis with Mistral AI (citation-grounded)',
         'Action Item Management (CRUD + Status)',
         'Overdue Detection',
         'Scheduled Reminder Job (node-cron)',

@@ -30,7 +30,7 @@ All notable changes to the Hintro Meeting Intelligence Service.
 - `GET /api/meetings/:id` — Get full meeting details
 
 #### AI Analysis
-- `POST /api/meetings/:id/analyze` — Gemini 1.5 Flash AI analysis
+- `POST /api/meetings/:id/analyze` — Mistral AI analysis
 - Structured output: summary, action items, decisions, follow-up suggestions
 - All outputs grounded in transcript with citation timestamps
 - Post-generation citation timestamp validation (hallucination prevention)
