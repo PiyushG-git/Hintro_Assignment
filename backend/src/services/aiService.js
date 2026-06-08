@@ -1,7 +1,6 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const logger = require('../utils/logger');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 
 /**
  * Validates that every citation timestamp actually exists in the transcript.
@@ -31,21 +30,13 @@ const validateAssignee = (assignee, validSpeakers) => {
 };
 
 /**
- * Analyzes a meeting transcript using Google Gemini AI.
+ * Analyzes a meeting transcript using Mistral AI.
  * Returns grounded insights with citations tied to transcript timestamps.
  *
  * @param {object} meeting - Mongoose Meeting document
  * @returns {Promise<object>} analysis result
  */
 const analyzeMeeting = async (meeting) => {
-  const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: 0.1, // Low temperature for factual, grounded output
-    },
-  });
-
   // Build transcript string for the prompt
   const transcriptLines = meeting.transcript
     .map((t) => `[${t.timestamp}] ${t.speaker}: ${t.text}`)
@@ -54,7 +45,7 @@ const analyzeMeeting = async (meeting) => {
   const validTimestamps = new Set(meeting.transcript.map((t) => t.timestamp));
   const validSpeakers = [...new Set(meeting.transcript.map((t) => t.speaker))];
 
-  const systemPrompt = `You are a precise meeting analysis assistant. Your ONLY job is to extract information that is EXPLICITLY stated in the transcript. 
+  const systemPrompt = `You are a precise meeting analysis assistant. Your ONLY job is to extract information that is EXPLICITLY stated in the transcript.
 
 STRICT RULES:
 1. NEVER invent, infer, or hallucinate information not directly in the transcript.
@@ -63,7 +54,7 @@ STRICT RULES:
 4. EVERY item you generate MUST include at least one citation with a timestamp that EXACTLY matches one of these valid timestamps: [${[...validTimestamps].join(', ')}]
 5. Assignees for action items MUST be one of these speakers: [${validSpeakers.join(', ')}]
 6. If something is unclear or not mentioned, omit it rather than guessing.
-7. Return ONLY valid JSON matching the schema below.
+7. Return ONLY valid JSON — no markdown, no explanation, no code fences.
 
 OUTPUT SCHEMA (strict JSON):
 {
@@ -102,18 +93,47 @@ Participants: ${meeting.participants.join(', ')}
 TRANSCRIPT:
 ${transcriptLines}
 
-Analyze this transcript strictly following the rules above. Extract only what is explicitly present.`;
+Analyze this transcript strictly following the rules above. Extract only what is explicitly present. Return ONLY the raw JSON object.`;
 
-  logger.info(`Starting Gemini analysis for meeting: ${meeting._id}`);
+  logger.info(`Starting Mistral analysis for meeting: ${meeting._id}`);
 
-  const result = await model.generateContent([systemPrompt, userPrompt]);
-  const rawText = result.response.text();
+  const response = await fetch(MISTRAL_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: process.env.MISTRAL_MODEL || 'mistral-medium-latest',
+      temperature: 0.1, // Low temperature for factual, grounded output
+      response_format: { type: 'json_object' }, // Force JSON output
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    logger.error('Mistral API error', { status: response.status, body: errBody.slice(0, 300) });
+    throw new Error(`Mistral API returned ${response.status}: ${errBody.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const rawText = data.choices?.[0]?.message?.content;
+
+  if (!rawText) {
+    throw new Error('Mistral API returned an empty response.');
+  }
 
   let parsed;
   try {
-    parsed = JSON.parse(rawText);
+    // Strip any accidental markdown code fences before parsing
+    const cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    parsed = JSON.parse(cleaned);
   } catch {
-    logger.error('Gemini returned invalid JSON', { raw: rawText.slice(0, 500) });
+    logger.error('Mistral returned invalid JSON', { raw: rawText.slice(0, 500) });
     throw new Error('AI service returned malformed JSON. Please try again.');
   }
 
@@ -139,7 +159,7 @@ Analyze this transcript strictly following the rules above. Extract only what is
     followUpSuggestions: sanitize(parsed.followUpSuggestions),
   };
 
-  logger.info(`Gemini analysis complete for meeting: ${meeting._id}`, {
+  logger.info(`Mistral analysis complete for meeting: ${meeting._id}`, {
     summaryItems: analysis.summary.length,
     actionItems: analysis.actionItems.length,
     decisions: analysis.decisions.length,

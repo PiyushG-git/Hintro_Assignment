@@ -1,18 +1,5 @@
-// Mock the @google/generative-ai module
-jest.mock('@google/generative-ai', () => {
-  const mockGenerateContent = jest.fn();
-  return {
-    GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
-      getGenerativeModel: jest.fn().mockReturnValue({
-        generateContent: mockGenerateContent,
-      }),
-    })),
-    _mockGenerateContent: mockGenerateContent,
-  };
-});
-
+// aiService uses native fetch — mock it globally
 const { analyzeMeeting } = require('../src/services/aiService');
-const { _mockGenerateContent } = require('@google/generative-ai');
 
 const sampleMeeting = {
   _id: 'meeting-123',
@@ -25,10 +12,13 @@ const sampleMeeting = {
   ],
 };
 
-const makeGeminiResponse = (data) => ({
-  response: {
-    text: () => JSON.stringify(data),
-  },
+const makeFetchResponse = (data, ok = true, status = 200) => ({
+  ok,
+  status,
+  json: async () => ({
+    choices: [{ message: { content: JSON.stringify(data) } }],
+  }),
+  text: async () => JSON.stringify({ error: 'API Error' }),
 });
 
 describe('AI Service — analyzeMeeting', () => {
@@ -44,7 +34,7 @@ describe('AI Service — analyzeMeeting', () => {
       followUpSuggestions: [],
     };
 
-    _mockGenerateContent.mockResolvedValueOnce(makeGeminiResponse(mockAnalysis));
+    global.fetch = jest.fn().mockResolvedValueOnce(makeFetchResponse(mockAnalysis));
 
     const result = await analyzeMeeting(sampleMeeting);
 
@@ -61,8 +51,8 @@ describe('AI Service — analyzeMeeting', () => {
         {
           text: 'Some insight.',
           citations: [
-            { timestamp: '00:10' },           // Valid
-            { timestamp: '99:99' },           // INVALID — not in transcript
+            { timestamp: '00:10' },  // Valid
+            { timestamp: '99:99' },  // INVALID — not in transcript
           ],
         },
       ],
@@ -71,7 +61,7 @@ describe('AI Service — analyzeMeeting', () => {
       followUpSuggestions: [],
     };
 
-    _mockGenerateContent.mockResolvedValueOnce(makeGeminiResponse(mockAnalysisWithBadCitations));
+    global.fetch = jest.fn().mockResolvedValueOnce(makeFetchResponse(mockAnalysisWithBadCitations));
 
     const result = await analyzeMeeting(sampleMeeting);
 
@@ -95,7 +85,7 @@ describe('AI Service — analyzeMeeting', () => {
       followUpSuggestions: [],
     };
 
-    _mockGenerateContent.mockResolvedValueOnce(makeGeminiResponse(mockAnalysisWithFakeAssignee));
+    global.fetch = jest.fn().mockResolvedValueOnce(makeFetchResponse(mockAnalysisWithFakeAssignee));
 
     const result = await analyzeMeeting(sampleMeeting);
 
@@ -103,14 +93,27 @@ describe('AI Service — analyzeMeeting', () => {
     expect(result.actionItems[0].assignee).toBeNull();
   });
 
-  it('should throw an error if Gemini returns malformed JSON', async () => {
-    _mockGenerateContent.mockResolvedValueOnce({
-      response: { text: () => 'not valid json {{' },
+  it('should throw an error if Mistral returns malformed JSON', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: 'not valid json {{' } }],
+      }),
     });
 
     await expect(analyzeMeeting(sampleMeeting)).rejects.toThrow(
       'AI service returned malformed JSON'
     );
+  });
+
+  it('should throw when Mistral API returns a non-OK status', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      text: async () => 'Too Many Requests',
+    });
+
+    await expect(analyzeMeeting(sampleMeeting)).rejects.toThrow('Mistral API returned 429');
   });
 
   it('should handle empty transcript sections gracefully', async () => {
@@ -121,7 +124,7 @@ describe('AI Service — analyzeMeeting', () => {
       followUpSuggestions: [],
     };
 
-    _mockGenerateContent.mockResolvedValueOnce(makeGeminiResponse(emptyAnalysis));
+    global.fetch = jest.fn().mockResolvedValueOnce(makeFetchResponse(emptyAnalysis));
 
     const result = await analyzeMeeting(sampleMeeting);
 
